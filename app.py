@@ -5,7 +5,12 @@ import json
 import random
 import datetime
 
-app = Flask(__name__)
+base_dir = os.path.abspath(os.path.dirname(__file__))
+app = Flask(
+    __name__,
+    template_folder=os.path.join(base_dir, 'templates'),
+    static_folder=os.path.join(base_dir, 'static')
+)
 app.config.from_object(Config)
 
 def init_tables():
