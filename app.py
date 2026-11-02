@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from config import Config
 from db import get_db_connection, execute_query, test_connection
