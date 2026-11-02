@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Customer Bill / POS - DailyMart{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <form method="POST" id="billingForm">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="fw-bold text-dark mb-1">Create Customer Bill / POS Invoice</h3>
+                    <p class="text-muted small mb-0">Select products, set quantities, apply discounts, and generate an instant invoice.</p>
+                </div>
+                <a href="{{ url_for('bills') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Bills
+                </a>
+            </div>
+
+            <!-- Customer & Payment Details Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-person-circle text-primary me-2"></i>Customer & Payment Details</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold text-muted">Customer Name / Reference <span class="text-danger">*</span></label>
+                            <input type="text" name="customer_name" class="form-control" value="Walk-in Customer" required placeholder="e.g. Ramesh Kumar">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-muted">Payment Method <span class="text-danger">*</span></label>
+                            <select name="payment_method" class="form-select" required>
+                                <option value="Cash" selected>Cash</option>
+                                <option value="UPI">UPI / QR Code</option>
+                                <option value="Card">Debit / Credit Card</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-muted">Discount Applied (₹)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">₹</span>
+                                <input type="number" step="0.01" name="discount" id="discountInput" class="form-control" value="0.00" min="0" oninput="calculateGrandTotal()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Items Cart -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-cart-check-fill text-success me-2"></i>Invoice Line Items</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addRow()">
+                        <i class="bi bi-plus-circle me-1"></i> Add Another Product
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" id="itemsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="min-width: 300px;">Select Product</th>
+                                    <th class="text-end" style="width: 140px;">Unit Price (₹)</th>
+                                    <th class="text-center" style="width: 150px;">Quantity</th>
+                                    <th class="text-end" style="width: 160px;">Line Total (₹)</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsBody">
+                                <!-- Dynamic Item Rows Rendered Here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Calculation & Submit Bar -->
+            <div class="card shadow-sm border-0 mb-5 bg-white">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 text-muted small">
+                            <i class="bi bi-shield-check text-success me-1"></i> Stock will be automatically deducted from MySQL inventory upon completion.
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="d-flex justify-content-md-end gap-4 mb-2 small text-muted">
+                                <span>Subtotal: <strong id="subtotalDisplay" class="text-dark">₹0.00</strong></span>
+                                <span>Discount: <strong id="discountDisplay" class="text-danger">-₹0.00</strong></span>
+                            </div>
+                            <div class="d-flex justify-content-md-end align-items-center gap-3">
+                                <span class="fs-5 fw-bold text-dark">Grand Total:</span>
+                                <span class="fs-3 fw-bold text-success" id="grandTotalDisplay">₹0.00</span>
+                                <button type="submit" class="btn btn-success px-4 py-2 fw-semibold shadow-sm ms-2">
+                                    <i class="bi bi-check2-circle me-1"></i> Generate Bill & Complete Sale
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Product catalog data passed from MySQL
+    const availableProducts = [
+        {% for p in products %}
+        {
+            id: {{ p.Product_ID }},
+            name: "{{ p.Product_Name }}",
+            brand: "{{ p.Brand }}",
+            category: "{{ p.Category }}",
+            price: {{ p.Selling_Price }},
+            stock: {{ p.Available_Quantity }}
+        },
+        {% endfor %}
+    ];
+
+    let rowCount = 0;
+
+    function addRow() {
+        rowCount++;
+        const tbody = document.getElementById('itemsBody');
+        const tr = document.createElement('tr');
+        tr.id = `row_${rowCount}`;
+
+        let optionsHtml = '<option value="">-- Choose a product --</option>';
+        availableProducts.forEach(prod => {
+            optionsHtml += `<option value="${prod.id}" data-price="${prod.price}" data-stock="${prod.stock}">${prod.name} (${prod.brand}) - ₹${prod.price.toFixed(2)} [${prod.stock} in stock]</option>`;
+        });
+
+        tr.innerHTML = `
+            <td>
+                <select name="product_id[]" class="form-select product-select" required onchange="handleProductSelect(this, ${rowCount})">
+                    ${optionsHtml}
+                </select>
+                <small class="text-muted stock-hint" id="stockHint_${rowCount}"></small>
+            </td>
+            <td class="text-end">
+                <span class="fw-semibold text-muted" id="priceDisplay_${rowCount}">₹0.00</span>
+            </td>
+            <td class="text-center">
+                <input type="number" name="quantity[]" id="qtyInput_${rowCount}" class="form-control text-center mx-auto" style="max-width: 100px;" value="1" min="1" required oninput="updateLineTotal(${rowCount})">
+            </td>
+            <td class="text-end">
+                <span class="fw-bold text-dark" id="lineTotal_${rowCount}">₹0.00</span>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="removeRow(${rowCount})" title="Remove item">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    }
+
+    function removeRow(id) {
+        const row = document.getElementById(`row_${id}`);
+        if (row) {
+            row.remove();
+            calculateGrandTotal();
+        }
+    }
+
+    function handleProductSelect(selectElem, id) {
+        const selectedOption = selectElem.options[selectElem.selectedIndex];
+        const price = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+        const stock = parseInt(selectedOption.getAttribute('data-stock')) || 0;
+
+        document.getElementById(`priceDisplay_${id}`).textContent = '₹' + price.toFixed(2);
+        const qtyInput = document.getElementById(`qtyInput_${id}`);
+        qtyInput.max = stock;
+
+        const hint = document.getElementById(`stockHint_${id}`);
+        if (stock > 0) {
+            hint.textContent = `Available in inventory: ${stock} units`;
+            hint.className = 'text-success small';
+        } else {
+            hint.textContent = `Out of stock`;
+            hint.className = 'text-danger small';
+        }
+
+        updateLineTotal(id);
+    }
+
+    function updateLineTotal(id) {
+        const select = document.querySelector(`#row_${id} .product-select`);
+        if (!select) return;
+
+        const selectedOption = select.options[select.selectedIndex];
+        const price = parseFloat(selectedOption?.getAttribute('data-price')) || 0;
+        const qty = parseInt(document.getElementById(`qtyInput_${id}`).value) || 0;
+
+        const lineTotal = price * qty;
+        document.getElementById(`lineTotal_${id}`).textContent = '₹' + lineTotal.toFixed(2);
+        calculateGrandTotal();
+    }
+
+    function calculateGrandTotal() {
+        let subtotal = 0;
+        document.querySelectorAll('#itemsBody tr').forEach(tr => {
+            const select = tr.querySelector('.product-select');
+            const qtyInput = tr.querySelector('input[type="number"]');
+            if (select && qtyInput && select.selectedIndex > 0) {
+                const price = parseFloat(select.options[select.selectedIndex].getAttribute('data-price')) || 0;
+                const qty = parseInt(qtyInput.value) || 0;
+                subtotal += (price * qty);
+            }
+        });
+
+        const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+        const grandTotal = Math.max(0, subtotal - discount);
+
+        document.getElementById('subtotalDisplay').textContent = '₹' + subtotal.toFixed(2);
+        document.getElementById('discountDisplay').textContent = '-₹' + discount.toFixed(2);
+        document.getElementById('grandTotalDisplay').textContent = '₹' + grandTotal.toFixed(2);
+    }
+
+    // Add initial row on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        addRow();
+    });
+</script>
+{% endblock %}
+

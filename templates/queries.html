@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}Joins & Stored Procedures - GroceryShop{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Advanced Queries, Joins & Stored Procedures</h3>
+    <p class="text-muted">Demonstrating Relational Joins, Aggregate Functions with <code
+            class="code-badge">GROUP BY</code> & <code class="code-badge">HAVING</code>, and Stored Routine Execution.
+    </p>
+</div>
+
+<!-- 1. Multi-Table JOIN Demo -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-diagram-3-fill me-2"></i>Multi-Table Relational JOIN
+            </h5>
+            <small class="text-muted">Joining <code>BILL</code>, <code>BILL_PRODUCT</code>, and <code>PRODUCT</code>
+                tables to compute item totals.</small>
+        </div>
+        <span class="badge bg-primary">INNER JOIN Demo</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Bill ID</th>
+                        <th>Customer</th>
+                        <th>Payment</th>
+                        <th>Product Purchased</th>
+                        <th>Category</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-end">Unit Price (₹)</th>
+                        <th class="text-end">Item Total (₹)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in bill_details %}
+                    <tr>
+                        <td class="fw-bold">{{ row.Bill_ID }}</td>
+                        <td>{{ row.Bill_Name }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ row.Payment_Method }}</span></td>
+                        <td class="fw-semibold">{{ row.Product_Name }}</td>
+                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary">{{ row.Category }}</span></td>
+                        <td class="text-center">{{ row.Quantity }}</td>
+                        <td class="text-end text-muted">₹{{ "%.2f"|format(row.Unit_Selling_Price) }}</td>
+                        <td class="text-end fw-bold text-success">₹{{ "%.2f"|format(row.Item_Total) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Aggregations (GROUP BY & HAVING) -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="fw-bold mb-0 text-success"><i class="bi bi-bar-chart-fill me-2"></i>Category Aggregation (GROUP
+                BY & HAVING)</h5>
+            <small class="text-muted">Computes total products, average selling price, and total units per
+                category.</small>
+        </div>
+        <span class="badge bg-success">Aggregation Demo</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Category</th>
+                        <th class="text-center">Total Products</th>
+                        <th class="text-end">Average Selling Price (₹)</th>
+                        <th class="text-center">Total Stock Available</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in category_summary %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ row.Category }}</td>
+                        <td class="text-center">{{ row.Total_Products }}</td>
+                        <td class="text-end">₹{{ "%.2f"|format(row.Avg_Price) }}</td>
+                        <td class="text-center fw-semibold">{{ row.Total_Stock }} units</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Stored Procedure & Function Execution -->
+<div class="row g-4">
+    <!-- Stored Procedure: GetProductsByCategory -->
+    <div class="col-md-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-cpu-fill me-2 text-info"></i>Execute Stored Procedure
+                </h5>
+                <small class="text-muted font-monospace">CALL GetProductsByCategory(category_name);</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('queries') }}" class="row g-2 mb-3">
+                    <div class="col-8">
+                        <select name="category_filter" class="form-select form-select-sm">
+                            {% for cat in categories %}
+                            <option value="{{ cat }}" {% if selected_category==cat %}selected{% endif %}>{{ cat }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <button type="submit" class="btn btn-info btn-sm text-dark w-100 fw-semibold">
+                            <i class="bi bi-play-fill"></i> CALL Procedure
+                        </button>
+                    </div>
+                </form>
+
+                {% if proc_err %}
+                <div class="alert alert-danger py-1 small">Procedure Error: {{ proc_err }}</div>
+                {% elif procedure_results %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered font-monospace small mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Product</th>
+                                <th>Price (₹)</th>
+                                <th>Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in procedure_results %}
+                            <tr>
+                                <td>{{ r.Product_ID }}</td>
+                                <td>{{ r.Product_Name }}</td>
+                                <td>₹{{ "%.2f"|format(r.Selling_Price) }}</td>
+                                <td>{{ r.Available_Quantity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Stored Function: CalculateStockValue -->
+    <div class="col-md-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-calculator-fill me-2 text-warning"></i>Execute Stored
+                    Function</h5>
+                <small class="text-muted font-monospace">SELECT CalculateStockValue(product_id);</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('queries') }}" class="mb-3">
+                    <label class="form-label small fw-semibold">Enter Product ID:</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" name="product_id_calc" class="form-control" value="{{ product_id_calc }}"
+                            required placeholder="e.g. 101">
+                        <button type="submit" class="btn btn-warning fw-semibold">Calculate Stock Value</button>
+                    </div>
+                </form>
+
+                {% if func_err %}
+                <div class="alert alert-danger py-1 small">Function Error: {{ func_err }}</div>
+                {% elif func_value is not none %}
+                <div class="alert alert-success py-2 mb-0">
+                    <div class="small text-muted">Stock Value for Product ID {{ product_id_calc }}:</div>
+                    <h4 class="fw-bold text-success mb-0">₹{{ "%.2f"|format(func_value) }}</h4>
+                    <small class="text-muted">(Selling_Price &times; Available_Quantity)</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

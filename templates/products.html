@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory & Product Catalog - DailyMart{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold text-dark mb-1">Store Inventory & Products</h3>
+        <p class="text-muted small mb-0">Manage stock quantities, selling prices, wholesale costs, and product entries.
+        </p>
+    </div>
+    <div>
+        <a href="{{ url_for('add_product') }}" class="btn btn-primary px-3 fw-semibold shadow-sm">
+            <i class="bi bi-plus-circle-fill me-1"></i> Add New Product
+        </a>
+    </div>
+</div>
+
+<!-- Search, Filter & Sort Controls -->
+<div class="card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('products') }}" class="row g-2 align-items-center">
+        <!-- Search bar -->
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="search" class="form-control border-start-0"
+                    placeholder="Search item by name or brand..." value="{{ search }}">
+            </div>
+        </div>
+
+        <!-- Category Dropdown -->
+        <div class="col-md-3">
+            <select name="category" class="form-select">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if selected_category==cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Sort Dropdown -->
+        <div class="col-md-3">
+            <select name="sort" class="form-select">
+                <option value="id" {% if sort=='id' %}selected{% endif %}>Sort by: Product ID</option>
+                <option value="name" {% if sort=='name' %}selected{% endif %}>Sort by: Name (A-Z)</option>
+                <option value="stock_low" {% if sort=='stock_low' %}selected{% endif %}>Sort by: Lowest Stock First
+                </option>
+                <option value="price_high" {% if sort=='price_high' %}selected{% endif %}>Sort by: Price (High &rarr;
+                    Low)</option>
+                <option value="price_low" {% if sort=='price_low' %}selected{% endif %}>Sort by: Price (Low &rarr; High)
+                </option>
+            </select>
+        </div>
+
+        <!-- Actions -->
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-dark w-100 fw-semibold">
+                Apply
+            </button>
+            {% if search or selected_category or sort != 'id' %}
+            <a href="{{ url_for('products') }}" class="btn btn-outline-secondary" title="Reset Filters">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Products Table -->
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 70px;">ID</th>
+                    <th>Product & Brand</th>
+                    <th>Category</th>
+                    <th class="text-end">Cost Price</th>
+                    <th class="text-end">Selling Price</th>
+                    <th class="text-end">Profit Margin</th>
+                    <th class="text-center" style="min-width: 160px;">In Stock</th>
+                    <th>Expiry Date</th>
+                    <th class="text-center" style="width: 120px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if products %}
+                {% for p in products %}
+                <tr>
+                    <td class="fw-bold text-muted small">#{{ p.Product_ID }}</td>
+                    <td>
+                        <div class="fw-bold text-dark">{{ p.Product_Name }}</div>
+                        <small class="text-muted"><i class="bi bi-tag me-1"></i>{{ p.Brand }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border px-2 py-1">{{ p.Category }}</span>
+                    </td>
+                    <td class="text-end text-muted">₹{{ "%.2f"|format(p.Purchase_Price) }}</td>
+                    <td class="text-end fw-bold text-dark">₹{{ "%.2f"|format(p.Selling_Price) }}</td>
+                    <td class="text-end">
+                        {% set margin = p.Selling_Price - p.Purchase_Price %}
+                        <span class="badge bg-success bg-opacity-10 text-success fw-bold px-2 py-1">
+                            +₹{{ "%.2f"|format(margin) }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <!-- Quick Stock Adjustment Stepper -->
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                            <form method="POST" action="{{ url_for('adjust_stock', product_id=p.Product_ID) }}"
+                                class="d-inline">
+                                <input type="hidden" name="delta" value="-1">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-circle"
+                                    title="Decrement 1 unit in DB" {% if p.Available_Quantity <=0 %}disabled{% endif
+                                    %}>-</button>
+                            </form>
+
+                            <span
+                                class="badge badge-pill {% if p.Available_Quantity < 30 %}badge-low-stock{% elif p.Available_Quantity < 60 %}badge-medium-stock{% else %}badge-in-stock{% endif %} px-2 py-1">
+                                {{ p.Available_Quantity }} units
+                            </span>
+
+                            <form method="POST" action="{{ url_for('adjust_stock', product_id=p.Product_ID) }}"
+                                class="d-inline">
+                                <input type="hidden" name="delta" value="1">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-circle"
+                                    title="Increment 1 unit in DB">+</button>
+                            </form>
+                        </div>
+                    </td>
+                    <td>
+                        <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>{{ p.Expiry_Date }}</small>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('edit_product', product_id=p.Product_ID) }}"
+                                class="btn btn-outline-primary" title="Edit Product Details">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
+                                data-bs-target="#deleteModal{{ p.Product_ID }}" title="Delete Product from DB">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </div>
+
+                        <!-- Delete Confirmation Modal -->
+                        <div class="modal fade" id="deleteModal{{ p.Product_ID }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content text-start">
+                                    <div class="modal-header bg-danger text-white py-2">
+                                        <h6 class="modal-title fw-bold"><i
+                                                class="bi bi-exclamation-triangle-fill me-2"></i>Remove Product</h6>
+                                        <button type="button" class="btn-close btn-close-white"
+                                            data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="mb-2">Are you sure you want to delete <strong>{{ p.Product_Name
+                                                }}</strong> (ID: #{{ p.Product_ID }})?</p>
+                                        <div class="alert alert-warning py-1 small mb-0">
+                                            This action will permanently delete this product record from your MySQL
+                                            database.
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer py-2">
+                                        <button type="button" class="btn btn-secondary btn-sm"
+                                            data-bs-dismiss="modal">Cancel</button>
+                                        <form method="POST"
+                                            action="{{ url_for('delete_product', product_id=p.Product_ID) }}">
+                                            <button type="submit" class="btn btn-danger btn-sm fw-semibold">Delete
+                                                Product</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                        No products found matching your search.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

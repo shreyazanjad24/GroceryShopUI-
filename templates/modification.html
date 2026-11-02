@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Database Modification (DDL) - GroceryShop{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Database Modification (DDL - Data Definition Language)</h3>
+    <p class="text-muted">Demonstrating structural alterations using <code class="code-badge">ALTER TABLE</code> and
+        inspecting live schemas with <code class="code-badge">DESCRIBE</code>.</p>
+</div>
+
+<!-- Interactive ALTER TABLE Triggers -->
+<div class="card mb-4 shadow-sm border-start border-primary border-4">
+    <div class="card-body">
+        <h5 class="fw-bold text-primary mb-2"><i class="bi bi-play-circle-fill me-2"></i>Execute DDL Modifications Live
+        </h5>
+        <p class="text-muted small">Click the buttons below to run actual <code class="code-badge">ALTER TABLE</code>
+            commands against your MySQL database instance and observe the schema change below:</p>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="border rounded p-3 bg-light">
+                    <h6 class="fw-bold text-dark mb-1">1. Add Column to Table</h6>
+                    <p class="font-monospace text-primary small mb-2">ALTER TABLE SUPPLIER ADD COLUMN Email
+                        VARCHAR(100);</p>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="add_email">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-plus-square me-1"></i> Execute ALTER TABLE ADD COLUMN
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="border rounded p-3 bg-light">
+                    <h6 class="fw-bold text-dark mb-1">2. Modify Column Datatype</h6>
+                    <p class="font-monospace text-primary small mb-2">ALTER TABLE PRODUCT MODIFY Category VARCHAR(120);
+                    </p>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="modify_category">
+                        <button type="submit" class="btn btn-outline-info text-dark btn-sm">
+                            <i class="bi bi-pencil-square me-1"></i> Execute ALTER TABLE MODIFY COLUMN
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Schemas -->
+<div class="row g-4">
+    <!-- PRODUCT Schema -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-table me-2 text-primary"></i>Schema: PRODUCT</h5>
+                <span class="badge bg-secondary font-monospace">DESCRIBE PRODUCT</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 font-monospace small">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Null</th>
+                                <th>Key</th>
+                                <th>Default</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col in prod_schema %}
+                            <tr>
+                                <td class="fw-bold text-primary">{{ col.Field }}</td>
+                                <td>{{ col.Type }}</td>
+                                <td>{{ col.Null }}</td>
+                                <td>
+                                    {% if col.Key == 'PRI' %}
+                                    <span class="badge bg-danger">PRI</span>
+                                    {% elif col.Key %}
+                                    <span class="badge bg-info text-dark">{{ col.Key }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ col.Default if col.Default is not none else 'NULL' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUPPLIER Schema -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-table me-2 text-success"></i>Schema: SUPPLIER</h5>
+                <span class="badge bg-secondary font-monospace">DESCRIBE SUPPLIER</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 font-monospace small">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Null</th>
+                                <th>Key</th>
+                                <th>Default</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col in supp_schema %}
+                            <tr>
+                                <td class="fw-bold text-success">{{ col.Field }}</td>
+                                <td>{{ col.Type }}</td>
+                                <td>{{ col.Null }}</td>
+                                <td>
+                                    {% if col.Key == 'PRI' %}
+                                    <span class="badge bg-danger">PRI</span>
+                                    {% elif col.Key %}
+                                    <span class="badge bg-info text-dark">{{ col.Key }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ col.Default if col.Default is not none else 'NULL' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Theory Explanation Card -->
+<div class="card mt-4 shadow-sm bg-white">
+    <div class="card-body">
+        <h6 class="fw-bold text-dark"><i class="bi bi-lightbulb-fill text-warning me-2"></i>Viva / Practical Concept:
+            What is Database Modification?</h6>
+        <p class="small text-muted mb-0">
+            Database modification can occur at two levels:
+            <br>1. <strong>Structural Modification (DDL)</strong>: Uses <code class="code-badge">ALTER TABLE</code> to
+            add new columns, remove obsolete columns, rename attributes, or alter datatypes without losing existing
+            table data.
+            <br>2. <strong>Data Manipulation (DML)</strong>: Uses <code class="code-badge">UPDATE</code> or <code
+                class="code-badge">DELETE</code> to modify the values stored inside table tuples.
+        </p>
+    </div>
+</div>
+{% endblock %}

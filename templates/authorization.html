@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Database Authorization (DCL) - GroceryShop{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Database Authorization (DCL - Data Control Language)</h3>
+    <p class="text-muted">Demonstrating User Creation, Privilege Delegation (<code class="code-badge">GRANT</code>), and
+        Privilege Revocation (<code class="code-badge">REVOKE</code>) inside MySQL.</p>
+</div>
+
+<!-- Role Switcher Card -->
+<div class="card mb-4 shadow-sm border-start border-warning border-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="fw-bold mb-1">
+                    Currently Active Session Role:
+                    <span
+                        class="badge {% if active_role == 'admin' %}bg-success{% else %}bg-warning text-dark{% endif %} fs-6">
+                        {{ active_role | upper }}
+                    </span>
+                </h5>
+                <p class="text-muted small mb-0">
+                    {% if active_role == 'admin' %}
+                    Connected as <strong>root (DBA / Admin)</strong>: You have full permissions across DDL (CREATE,
+                    ALTER), DML (INSERT, UPDATE, DELETE), and DCL (GRANT).
+                    {% else %}
+                    Connected as <strong>grocery_viewer (Restricted Cashier/Staff)</strong>: You only possess
+                    <code>SELECT</code> permissions on views and tables. Any write attempt will be rejected by MySQL
+                    engine.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                {% if active_role == 'admin' %}
+                <a href="{{ url_for('switch_role', role='viewer') }}" class="btn btn-warning text-dark fw-bold">
+                    <i class="bi bi-shield-slash me-1"></i> Switch to VIEWER Mode
+                </a>
+                {% else %}
+                <a href="{{ url_for('switch_role', role='admin') }}" class="btn btn-success fw-bold">
+                    <i class="bi bi-shield-check me-1"></i> Switch to ADMIN Mode
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Side-by-Side Comparison of Grants -->
+<div class="row g-4 mb-4">
+    <!-- Admin Privileges -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white py-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-shield-fill-check me-2"></i>Admin User (root@localhost)</h5>
+                <small>Full DBA Privileges (DDL, DML, DCL)</small>
+            </div>
+            <div class="card-body">
+                <h6 class="fw-bold text-dark small mb-2">Live Privileges from MySQL (<code
+                        class="code-badge">SHOW GRANTS</code>):</h6>
+                <div class="bg-light p-3 rounded font-monospace small border">
+                    {% if admin_grants %}
+                    {% for g in admin_grants %}
+                    <div class="mb-1 text-success">{{ g['Grants for root@localhost'] or g['Grants for root@%'] or
+                        g.values()|first }}</div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-muted">Unable to query admin grants.</div>
+                    {% endif %}
+                </div>
+                <div class="mt-3 small text-muted">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i> Allowed: CREATE TABLE, ALTER TABLE, DROP,
+                    INSERT, UPDATE, DELETE, GRANT.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Viewer Privileges -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-warning text-dark py-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-shield-lock-fill me-2"></i>Restricted User
+                    (grocery_viewer@localhost)</h5>
+                <small>Limited Read-Only Privileges (SELECT only)</small>
+            </div>
+            <div class="card-body">
+                <h6 class="fw-bold text-dark small mb-2">Live Privileges from MySQL (<code
+                        class="code-badge">SHOW GRANTS</code>):</h6>
+                <div class="bg-light p-3 rounded font-monospace small border">
+                    {% if viewer_grants %}
+                    {% for g in viewer_grants %}
+                    <div class="mb-1 text-primary">{{ g['Grants for grocery_viewer@localhost'] or g.values()|first }}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-muted">User 'grocery_viewer'@'localhost' not yet created or privileges not found.
+                        Run the provided SQL script to create it!</div>
+                    {% endif %}
+                </div>
+                <div class="mt-3 small text-muted">
+                    <i class="bi bi-dash-circle-fill text-warning me-1"></i> Allowed: SELECT only.<br>
+                    <i class="bi bi-x-circle-fill text-danger me-1"></i> Blocked: INSERT, UPDATE, DELETE, ALTER, DROP.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DCL SQL Syntax Reference -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="card-title fw-bold mb-0 text-dark"><i class="bi bi-code-square me-2 text-primary"></i>DCL Commands
+            Used in this Project</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h6 class="fw-bold text-primary mb-1">1. User Creation & Granting Privileges:</h6>
+                <pre class="mb-0"><code>-- 1. Create User
+CREATE USER IF NOT EXISTS 'grocery_viewer'@'localhost'
+IDENTIFIED BY 'Grocery@123';
+
+-- 2. Grant SELECT privileges on views & tables
+GRANT SELECT ON GroceryShopDB.Product_View TO 'grocery_viewer'@'localhost';
+GRANT SELECT ON GroceryShopDB.PRODUCT TO 'grocery_viewer'@'localhost';
+GRANT SELECT ON GroceryShopDB.Bill_Summary_View TO 'grocery_viewer'@'localhost';
+
+FLUSH PRIVILEGES;</code></pre>
+            </div>
+
+            <div class="col-md-6">
+                <h6 class="fw-bold text-danger mb-1">2. Revoking Privileges & Inspection:</h6>
+                <pre class="mb-0"><code>-- 3. Show active grants
+SHOW GRANTS FOR 'grocery_viewer'@'localhost';
+
+-- 4. Revoke Privilege (if needed)
+REVOKE INSERT, UPDATE, DELETE 
+ON GroceryShopDB.* 
+FROM 'grocery_viewer'@'localhost';
+
+FLUSH PRIVILEGES;</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

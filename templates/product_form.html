@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Product - DailyMart{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi {% if action == 'Add' %}bi-plus-circle-fill text-primary{% else %}bi-pencil-square text-info{% endif %} me-2"></i>
+                        {{ action }} Inventory Product
+                    </h5>
+                    <small class="text-muted">Enter product specifications and pricing to save directly to the database.</small>
+                </div>
+                <a href="{{ url_for('products') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Inventory
+                </a>
+            </div>
+
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="row g-3">
+                        <!-- Product ID -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted">Product ID / Code <span class="text-danger">*</span></label>
+                            <input type="number" name="product_id" class="form-control font-monospace" 
+                                   value="{{ product.Product_ID if product else suggested_id }}" 
+                                   {% if action == 'Edit' %}readonly{% endif %} required>
+                            <div class="form-text small">Unique item identifier in MySQL.</div>
+                        </div>
+
+                        <!-- Product Name -->
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold small text-muted">Product Name <span class="text-danger">*</span></label>
+                            <input type="text" name="product_name" class="form-control" 
+                                   value="{{ product.Product_Name if product else '' }}" 
+                                   required placeholder="e.g. Tata Tea Gold 250g">
+                        </div>
+
+                        <!-- Category -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted">Category <span class="text-danger">*</span></label>
+                            <input type="text" name="category" class="form-control" 
+                                   value="{{ product.Category if product else '' }}" 
+                                   required placeholder="e.g. Beverages, Dairy, Snacks, Grocery">
+                        </div>
+
+                        <!-- Brand -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted">Brand / Manufacturer</label>
+                            <input type="text" name="brand" class="form-control" 
+                                   value="{{ product.Brand if product else '' }}" 
+                                   placeholder="e.g. Tata, Amul, Nestle, Britannia">
+                        </div>
+
+                        <!-- Cost Price -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted">Cost Price (Purchase ₹) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">₹</span>
+                                <input type="number" step="0.01" name="purchase_price" class="form-control" 
+                                       value="{{ product.Purchase_Price if product else '' }}" 
+                                       required placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- Selling Price -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted">Retail Price (Selling ₹) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">₹</span>
+                                <input type="number" step="0.01" name="selling_price" class="form-control" 
+                                       value="{{ product.Selling_Price if product else '' }}" 
+                                       required placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- Initial Quantity -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted">Initial Stock Units <span class="text-danger">*</span></label>
+                            <input type="number" name="available_quantity" class="form-control" 
+                                   value="{{ product.Available_Quantity if product else '50' }}" 
+                                   required placeholder="e.g. 50">
+                        </div>
+
+                        <!-- Expiry Date -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted">Expiry Date <span class="text-danger">*</span></label>
+                            <input type="date" name="expiry_date" class="form-control" 
+                                   value="{{ product.Expiry_Date if product else '2028-12-31' }}" required>
+                        </div>
+                    </div>
+
+                    <!-- Submit Actions -->
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('products') }}" class="btn btn-light px-3">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Save to Database
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

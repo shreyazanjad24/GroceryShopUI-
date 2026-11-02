@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Store & Database Settings - DailyMart{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="card-title fw-bold mb-0 text-dark">
+                    <i class="bi bi-sliders me-2 text-primary"></i>Store Database Configuration
+                </h5>
+                <small class="text-muted">Configure the connection to your MySQL Server and verify sync.</small>
+            </div>
+
+            <div class="card-body p-4">
+                <!-- Status Alert -->
+                <div class="mb-4">
+                    <label class="small fw-semibold text-muted text-uppercase d-block mb-2">Live Connection Status:</label>
+                    <div class="p-3 rounded border {% if admin_status is true %}bg-success bg-opacity-10 border-success{% else %}bg-danger bg-opacity-10 border-danger{% endif %} d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="fw-bold {% if admin_status is true %}text-success{% else %}text-danger{% endif %}">
+                                {% if admin_status is true %}
+                                    <i class="bi bi-check-circle-fill me-1"></i> Connected to MySQL ({{ config.MYSQL_DB }})
+                                {% else %}
+                                    <i class="bi bi-x-circle-fill me-1"></i> Connection Failed
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Host: {{ config.MYSQL_HOST }}:{{ config.MYSQL_PORT }} | User: {{ config.MYSQL_ADMIN_USER }}</small>
+                        </div>
+                        {% if admin_status is true %}
+                            <span class="badge bg-success">ACTIVE</span>
+                        {% else %}
+                            <span class="badge bg-danger">OFFLINE</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <form method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold text-muted">MySQL Host</label>
+                            <input type="text" name="host" class="form-control" value="{{ config.MYSQL_HOST }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-muted">Port</label>
+                            <input type="number" name="port" class="form-control" value="{{ config.MYSQL_PORT }}" required>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label small fw-semibold text-muted">Database Name</label>
+                            <input type="text" name="db" class="form-control" value="{{ config.MYSQL_DB }}" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted">MySQL Username</label>
+                            <input type="text" name="admin_user" class="form-control" value="{{ config.MYSQL_ADMIN_USER }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted">MySQL Password</label>
+                            <input type="password" name="admin_password" class="form-control" value="{{ config.MYSQL_ADMIN_PASSWORD }}" placeholder="Enter MySQL root password">
+                            <div class="form-text small">Your MySQL Workbench root password.</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('index') }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                            <i class="bi bi-save me-1"></i> Save & Test Sync
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
