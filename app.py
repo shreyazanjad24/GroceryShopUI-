@@ -77,74 +77,90 @@ def index():
     recent_bills = []
 
     if admin_status is True:
-        # 1. High-level KPIs
-        rev_row, _ = execute_query("SELECT IFNULL(SUM(Total_Amount),0) AS total_revenue, COUNT(*) AS total_bills FROM BILL", fetch_one=True, as_role='admin')
-        if rev_row:
-            stats['total_revenue'] = float(rev_row['total_revenue'])
-            stats['total_bills'] = rev_row['total_bills']
+        # Live MySQL Queries
+        try:
+            rev_row, _ = execute_query("SELECT IFNULL(SUM(Total_Amount),0) AS total_revenue, COUNT(*) AS total_bills FROM BILL", fetch_one=True, as_role='admin')
+            if rev_row:
+                stats['total_revenue'] = float(rev_row['total_revenue'])
+                stats['total_bills'] = rev_row['total_bills']
 
-        stock_row, _ = execute_query("SELECT COUNT(*) AS total_products, IFNULL(SUM(Selling_Price * Available_Quantity),0) AS total_val FROM PRODUCT", fetch_one=True, as_role='admin')
-        if stock_row:
-            stats['total_products'] = stock_row['total_products']
-            stats['inventory_value'] = float(stock_row['total_val'])
+            stock_row, _ = execute_query("SELECT COUNT(*) AS total_products, IFNULL(SUM(Selling_Price * Available_Quantity),0) AS total_val FROM PRODUCT", fetch_one=True, as_role='admin')
+            if stock_row:
+                stats['total_products'] = stock_row['total_products']
+                stats['inventory_value'] = float(stock_row['total_val'])
 
-        low_row, _ = execute_query("SELECT COUNT(*) AS count FROM PRODUCT WHERE Available_Quantity < 40", fetch_one=True, as_role='admin')
-        if low_row:
-            stats['low_stock_count'] = low_row['count']
+            low_row, _ = execute_query("SELECT COUNT(*) AS count FROM PRODUCT WHERE Available_Quantity < 40", fetch_one=True, as_role='admin')
+            if low_row:
+                stats['low_stock_count'] = low_row['count']
 
-        # 2. Data Visualization 1: Stock by Category
-        cat_data, _ = execute_query("""
-            SELECT Category, 
-                   SUM(Available_Quantity) AS total_stock,
-                   ROUND(SUM(Selling_Price * Available_Quantity), 2) AS category_value
-            FROM PRODUCT 
-            GROUP BY Category 
-            ORDER BY total_stock DESC
-        """, as_role='admin')
-        if cat_data:
-            chart_category_labels = [row['Category'] for row in cat_data]
-            chart_category_stock = [int(row['total_stock']) for row in cat_data]
-            chart_category_values = [float(row['category_value']) for row in cat_data]
+            cat_data, _ = execute_query("""
+                SELECT Category, SUM(Available_Quantity) AS total_stock, ROUND(SUM(Selling_Price * Available_Quantity), 2) AS category_value
+                FROM PRODUCT GROUP BY Category ORDER BY total_stock DESC
+            """, as_role='admin')
+            if cat_data:
+                chart_category_labels = [row['Category'] for row in cat_data]
+                chart_category_stock = [int(row['total_stock']) for row in cat_data]
+                chart_category_values = [float(row['category_value']) for row in cat_data]
 
-        # 3. Data Visualization 2: Sales by Payment Method
-        pay_data, _ = execute_query("""
-            SELECT Payment_Method, 
-                   COUNT(*) AS count, 
-                   IFNULL(SUM(Total_Amount), 0) AS total_sales
-            FROM BILL 
-            GROUP BY Payment_Method
-        """, as_role='admin')
-        if pay_data:
-            chart_payment_labels = [row['Payment_Method'] for row in pay_data]
-            chart_payment_totals = [float(row['total_sales']) for row in pay_data]
+            pay_data, _ = execute_query("""
+                SELECT Payment_Method, COUNT(*) AS count, IFNULL(SUM(Total_Amount), 0) AS total_sales
+                FROM BILL GROUP BY Payment_Method
+            """, as_role='admin')
+            if pay_data:
+                chart_payment_labels = [row['Payment_Method'] for row in pay_data]
+                chart_payment_totals = [float(row['total_sales']) for row in pay_data]
 
-        # 4. Data Visualization 3: Top Value Inventory Products
-        top_data, _ = execute_query("""
-            SELECT Product_Name, (Selling_Price * Available_Quantity) AS total_value
-            FROM PRODUCT
-            ORDER BY total_value DESC
-            LIMIT 5
-        """, as_role='admin')
-        if top_data:
-            top_products_labels = [row['Product_Name'] for row in top_data]
-            top_products_values = [float(row['total_value']) for row in top_data]
+            top_data, _ = execute_query("""
+                SELECT Product_Name, (Selling_Price * Available_Quantity) AS total_value
+                FROM PRODUCT ORDER BY total_value DESC LIMIT 5
+            """, as_role='admin')
+            if top_data:
+                top_products_labels = [row['Product_Name'] for row in top_data]
+                top_products_values = [float(row['total_value']) for row in top_data]
 
-        # 5. Low Stock Warning Table (< 40 units)
-        low_stock_items, _ = execute_query("""
-            SELECT Product_ID, Product_Name, Category, Brand, Available_Quantity, Selling_Price
-            FROM PRODUCT
-            WHERE Available_Quantity < 40
-            ORDER BY Available_Quantity ASC
-            LIMIT 6
-        """, as_role='admin')
+            low_stock_items, _ = execute_query("""
+                SELECT Product_ID, Product_Name, Category, Brand, Available_Quantity, Selling_Price
+                FROM PRODUCT WHERE Available_Quantity < 40 ORDER BY Available_Quantity ASC LIMIT 6
+            """, as_role='admin')
 
-        # 6. Recent Sales/Bills
-        recent_bills, _ = execute_query("""
-            SELECT Bill_ID, Bill_Name, Payment_Method, Total_Amount, Transaction_ID
-            FROM BILL
-            ORDER BY Bill_ID DESC
-            LIMIT 5
-        """, as_role='admin')
+            recent_bills, _ = execute_query("""
+                SELECT Bill_ID, Bill_Name, Payment_Method, Total_Amount, Transaction_ID
+                FROM BILL ORDER BY Bill_ID DESC LIMIT 5
+            """, as_role='admin')
+        except Exception:
+            pass
+    else:
+        # Fallback dataset so cloud preview on Vercel renders instantly without 500 error
+        from db import DEMO_PRODUCTS, DEMO_BILLS
+        stats['total_revenue'] = sum(b['Total_Amount'] for b in DEMO_BILLS)
+        stats['total_bills'] = len(DEMO_BILLS)
+        stats['total_products'] = len(DEMO_PRODUCTS)
+        stats['inventory_value'] = sum(p['Selling_Price'] * p['Available_Quantity'] for p in DEMO_PRODUCTS)
+        stats['low_stock_count'] = sum(1 for p in DEMO_PRODUCTS if p['Available_Quantity'] < 40)
+
+        # Category aggregates
+        cats = {}
+        for p in DEMO_PRODUCTS:
+            c = p['Category']
+            cats[c] = cats.get(c, 0) + p['Available_Quantity']
+        chart_category_labels = list(cats.keys())
+        chart_category_stock = list(cats.values())
+
+        # Payment aggregates
+        pays = {}
+        for b in DEMO_BILLS:
+            m = b['Payment_Method']
+            pays[m] = pays.get(m, 0) + b['Total_Amount']
+        chart_payment_labels = list(pays.keys())
+        chart_payment_totals = list(pays.values())
+
+        # Top value products
+        sorted_top = sorted(DEMO_PRODUCTS, key=lambda p: p['Selling_Price'] * p['Available_Quantity'], reverse=True)[:5]
+        top_products_labels = [p['Product_Name'] for p in sorted_top]
+        top_products_values = [p['Selling_Price'] * p['Available_Quantity'] for p in sorted_top]
+
+        low_stock_items = [p for p in DEMO_PRODUCTS if p['Available_Quantity'] < 40][:6]
+        recent_bills = DEMO_BILLS[:5]
 
     return render_template(
         'index.html',
