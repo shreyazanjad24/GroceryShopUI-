@@ -1,5 +1,10 @@
-import mysql.connector
-from mysql.connector import Error
+try:
+    import mysql.connector
+    from mysql.connector import Error
+except Exception:
+    mysql = None
+    Error = Exception
+
 from config import Config
 
 # Realistic fallback dataset for Cloud Preview / Demo mode when MySQL is offline
@@ -47,6 +52,9 @@ def get_db_connection(as_role='admin'):
     """
     Connect to MySQL with a strict 2-second timeout to prevent serverless function hangs.
     """
+    if mysql is None:
+        return None, "MySQL connector unavailable"
+
     if as_role == 'viewer':
         user = Config.MYSQL_VIEWER_USER
         password = Config.MYSQL_VIEWER_PASSWORD
